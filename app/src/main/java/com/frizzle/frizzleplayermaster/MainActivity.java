@@ -54,6 +54,7 @@ public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBar
         frizzlePlayer.setOnPrepareListener(new FrizzlePlayer.OnPrepareListener() {
             @Override
             public void onPrepared() {
+                //FFmpeg准备完成,开始播放
                 frizzlePlayer.start();
             }
         });

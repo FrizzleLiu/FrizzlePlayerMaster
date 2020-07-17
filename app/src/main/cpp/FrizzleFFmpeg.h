@@ -6,6 +6,8 @@
 #define FRIZZLEPLAYERMASTER_FRIZZLEFFMPEG_H
 #include <pthread.h>
 #include <android/native_window.h>
+#include "JavaCallHepler.h"
+
 extern "C" {
 #include <libavformat/avformat.h>
 #include <libavutil/time.h>
@@ -13,7 +15,7 @@ extern "C" {
 //控制层
 class FrizzleFFmpeg {
 public:
-    FrizzleFFmpeg(const char *data_path);
+    FrizzleFFmpeg(JavaCallHepler *javaCallHepler,const char *data_path);
     ~FrizzleFFmpeg();
     void prepare();
     void prepareFFmpeg();
@@ -21,6 +23,7 @@ private:
     pthread_t pid_prepare;
     AVFormatContext *avFormatContext;
     char *url;
+    JavaCallHepler *javaCallHepler;
 };
 
 
