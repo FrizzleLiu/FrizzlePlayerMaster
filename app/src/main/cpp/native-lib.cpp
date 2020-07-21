@@ -1,10 +1,11 @@
 #include <jni.h>
 #include <string>
 #include <android/native_window_jni.h>
-#include "FrizzleFFmpeg.h"
 #include "JavaCallHepler.h"
-extern "C"{
-#include <libavcodec/avcodec.h>
+#include "FrizzleFFmpeg.h"
+
+extern  "C"{
+#include "libavcodec/avcodec.h"
 }
 
 ANativeWindow *window=0;
@@ -18,6 +19,34 @@ JNIEXPORT jint JNICALL JNI_OnLoad(JavaVM *vm, void *reserved) {
     return JNI_VERSION_1_4;
 }
 
+void renderFrame(uint8_t *data,int linesize , int width ,int height){
+    //渲染
+    //设置窗口属性
+    ANativeWindow_setBuffersGeometry(window, width,
+                                     height,
+                                     WINDOW_FORMAT_RGBA_8888);
+
+    ANativeWindow_Buffer window_buffer;
+    if (ANativeWindow_lock(window, &window_buffer, 0)) {
+        ANativeWindow_release(window);
+        window = 0;
+        return;
+    }
+    //缓冲区  window_data[0] =255;
+    uint8_t *window_data = static_cast<uint8_t *>(window_buffer.bits);
+    //r     g   b  a int  字节转换成int所以需要*4
+    int window_linesize = window_buffer.stride * 4;
+    uint8_t *src_data = data;
+    //数据copy 按像素遍历宽高循环速度太慢 gif等播放要求不高的可以采取这种方式
+    //整体直接copy容易花屏(数据中一行的数据和屏幕的像素宽度可能不一致)
+    //所以一样一行的copy 处理内存对齐的问题
+    for (int i = 0; i < window_buffer.height; ++i) {
+        //每一行偏移的时候window偏移window_linesize   src_data偏移数据源的一行的数据size
+        memcpy(window_data + i * window_linesize, src_data + i * linesize, window_linesize);
+    }
+    ANativeWindow_unlockAndPost(window);
+}
+
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_frizzle_frizzleplayermaster_player_FrizzlePlayer_native_1prepare(JNIEnv *env, jobject thiz,
@@ -26,6 +55,7 @@ Java_com_frizzle_frizzleplayermaster_player_FrizzlePlayer_native_1prepare(JNIEnv
     const char *data_source=env->GetStringUTFChars(data_source_,0);
     javaCallHepler =new JavaCallHepler(javaVm,env,thiz);
     frizzleFFmpeg= new FrizzleFFmpeg(javaCallHepler, data_source);
+    frizzleFFmpeg->setRenderCallback(renderFrame);
     //初始化ffmpeg
     frizzleFFmpeg->prepare();
 
@@ -35,7 +65,11 @@ Java_com_frizzle_frizzleplayermaster_player_FrizzlePlayer_native_1prepare(JNIEnv
 extern "C"
 JNIEXPORT void JNICALL
 Java_com_frizzle_frizzleplayermaster_player_FrizzlePlayer_native_1start(JNIEnv *env, jobject thiz) {
-
+    //开始播放
+    if (frizzleFFmpeg){
+        LOGE("FFmpeg准备完毕,开始播放");
+        frizzleFFmpeg->start();
+    }
 
 }
 

@@ -1,5 +1,6 @@
 package com.frizzle.frizzleplayermaster.player;
 
+import android.util.Log;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -35,8 +36,12 @@ public class FrizzlePlayer  implements SurfaceHolder.Callback {
     }
 
     public void setDataSource(String absolutePath) {
+        this.dataSource=absolutePath;
 
+    }
 
+    public void prepare() {
+        native_prepare(dataSource);
     }
 
     public void setOnPrepareListener(OnPrepareListener onPrepareListener) {
@@ -82,6 +87,7 @@ public class FrizzlePlayer  implements SurfaceHolder.Callback {
     }
     //错误
     public void onError(int errorCode) {
+        Log.e("errorCode: ",""+errorCode);
         if (null != onErrorListener) {
             onErrorListener.onError(errorCode);
         }

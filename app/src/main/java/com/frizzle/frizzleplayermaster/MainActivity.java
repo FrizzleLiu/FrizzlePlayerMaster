@@ -29,10 +29,12 @@ public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBar
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        getWindow().setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON, WindowManager
+                .LayoutParams.FLAG_KEEP_SCREEN_ON);
         setContentView(R.layout.activity_main);
-
-        surfaceView = findViewById(R.id.surfaceView);
+        SurfaceView surfaceView = findViewById(R.id.surfaceView);
         seekBar = findViewById(R.id.seekBar);
+        seekBar.setOnSeekBarChangeListener(this);
         Button btnPlay = findViewById(R.id.btn_play);
         btnPlay.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -40,12 +42,6 @@ public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBar
                 play();
             }
         });
-        getWindow().setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON, WindowManager
-                .LayoutParams.FLAG_KEEP_SCREEN_ON);
-        setContentView(R.layout.activity_main);
-        SurfaceView surfaceView = findViewById(R.id.surfaceView);
-        seekBar = findViewById(R.id.seekBar);
-        seekBar.setOnSeekBarChangeListener(this);
         checkPermission();
         frizzlePlayer = new FrizzlePlayer();
         frizzlePlayer.setSurfaceView(surfaceView);
@@ -54,7 +50,6 @@ public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBar
         frizzlePlayer.setOnPrepareListener(new FrizzlePlayer.OnPrepareListener() {
             @Override
             public void onPrepared() {
-                //FFmpeg准备完成,开始播放
                 frizzlePlayer.start();
             }
         });
@@ -101,7 +96,7 @@ public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBar
     }
 
     private void play() {
-
+        frizzlePlayer.prepare();
     }
 
     @Override
