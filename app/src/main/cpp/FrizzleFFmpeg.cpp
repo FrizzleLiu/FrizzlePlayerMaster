@@ -134,9 +134,9 @@ void FrizzleFFmpeg::start() {
         LOGE("videoChannel开始播放");
     }
     //播放音频
-//    if (audioChannel) {
-//        audioChannel->play();
-//    }
+    if (audioChannel) {
+        audioChannel->play();
+    }
 
     pthread_create(&pid_play, NULL, startThread, this);
 }
@@ -162,7 +162,7 @@ void FrizzleFFmpeg::play() {
         //  将音/视频Packet放入对应队列
         if (resultCode == 0) {
             if (audioChannel && avPacket->stream_index == audioChannel->channelId) {
-//                audioChannel->packet_queue.enQueue(avPacket);
+                audioChannel->packet_queue.enQueue(avPacket);
             } else if (videoChannel && avPacket->stream_index == videoChannel->channelId) {
                 LOGE("存入一帧视频数据");
                 videoChannel->packet_queue.enQueue(avPacket);

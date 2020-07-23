@@ -5,8 +5,11 @@
 #ifndef FRIZZLEPLAYERMASTER_AUDIOCHANNEL_H
 #define FRIZZLEPLAYERMASTER_AUDIOCHANNEL_H
 
+#include <SLES/OpenSLES_Android.h>
+
 extern "C"{
 #include <libavcodec/avcodec.h>
+#include <libswresample/swresample.h>
 }
 
 #include "BaseChannel.h"
@@ -20,6 +23,21 @@ public:
 
     virtual void stop();
 
+    void initOpenSL();
+
+    void decode();
+
+    int getPcm();
+
+private:
+    pthread_t pid_audio_play;
+    pthread_t pid_audio_decode;
+    SwrContext *swr_ctx = NULL;
+    int out_channels;
+    int out_samplesize;
+    int out_sample_rate;
+public:
+    uint8_t *buffer;
 };
 
 
