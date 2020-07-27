@@ -58,6 +58,8 @@ void FrizzleFFmpeg::prepareFFmpeg() {
 
     for (int i = 0; i < avFormatContext->nb_streams; ++i) {
         AVCodecParameters *codecpar = avFormatContext->streams[i]->codecpar;
+        //拿到视频流,用于获取帧率(fps)
+        AVStream *stream = avFormatContext->streams[i];
         //找解码器
         AVCodec *avCodec = avcodec_find_decoder(codecpar->codec_id);
         //找不到解码器
@@ -95,13 +97,19 @@ void FrizzleFFmpeg::prepareFFmpeg() {
 
         //音频流
         if (codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
-            audioChannel = new AudioChannel(i, javaCallHepler, avCodecContext);
+            audioChannel = new AudioChannel(i, javaCallHepler, avCodecContext,stream->time_base);
         }
 
         //视频流
         if (codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
-            videoChannel = new VideoChannel(i, javaCallHepler, avCodecContext);
+            //计算帧率
+            AVRational frame_rate = stream->avg_frame_rate;
+//            int fps = frame_rate.num/frame_rate.den;  //每帧的播放时间1/fps
+            //或者上面的计算
+            int fps = av_q2d(frame_rate);
+            videoChannel = new VideoChannel(i, javaCallHepler, avCodecContext,stream->time_base);
             videoChannel->setRenderCallback(renderFrame);
+            videoChannel->setFps(fps);
         }
     }
     //音视频都没有
@@ -110,6 +118,7 @@ void FrizzleFFmpeg::prepareFFmpeg() {
             javaCallHepler->onError(THREAD_CHILD, FFMPEG_NOMEDIA);
         return;
     }
+    videoChannel->audioChannel=audioChannel;
     //FFmpeg准备完成回调
     if (javaCallHepler) {
         javaCallHepler->onPrepare(THREAD_CHILD);

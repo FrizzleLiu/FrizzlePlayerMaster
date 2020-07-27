@@ -15,9 +15,9 @@ class BaseChannel {
 
 public:
     BaseChannel(int id, JavaCallHepler *javaCallHelper, AVCodecContext *avCodecContext
-    ) : channelId(id),
+    ,AVRational time_base) : channelId(id),
         javaCallHelper(javaCallHelper),
-        avCodecContext(avCodecContext)
+        avCodecContext(avCodecContext),time_base(time_base)
     {
         packet_queue.setReleaseHandle(releaseAvPacket);
         frame_queue.setReleaseHandle(releaseAvFrame);
@@ -55,5 +55,8 @@ public:
     volatile bool isPlaying  ;
     AVCodecContext *avCodecContext;
     JavaCallHepler *javaCallHelper;
+    AVRational time_base;
+    //用于音视频同步,记录当前音频播放的时间线,是相对时间
+    double clock;
 };
 #endif //FRIZZLEPLAYERMASTER_BASECHANNEL_H

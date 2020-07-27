@@ -13,10 +13,39 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
-VideoChannel::VideoChannel(int id, JavaCallHepler *javaCallHepler, AVCodecContext *avCodecContext)
-        : BaseChannel(id, javaCallHepler, avCodecContext) {
+//丢弃Packet
+//丢Packet需要考虑关键帧保留 以及Frame队列还有数据
+void dropPacket(queue<AVPacket *> &q) {
+
+    while (!q.empty()) {
+        LOGE("丢弃视频帧数据......");
+        AVPacket *pkt = q.front();
+        if (pkt->flags != AV_PKT_FLAG_KEY) {
+            q.pop();
+            BaseChannel::releaseAvPacket(pkt);
+        } else{
+            break;
+        }
+    }
+}
+
+//丢弃Frame直接清空Frame队列
+//Frame队列是和渲染直接关联的,当然两种方式都可以实现,建议丢弃Frame
+void dropFrame(queue<AVFrame *> &q) {
+    if (!q.empty()) {
+        AVFrame *frame = q.front();
+        q.pop();
+        BaseChannel::releaseAvFrame(frame);
+    }
+}
+
+VideoChannel::VideoChannel(int id, JavaCallHepler *javaCallHepler, AVCodecContext *avCodecContext,AVRational time_base)
+        : BaseChannel(id, javaCallHepler, avCodecContext,time_base) {
     this->javaCallHelper=javaCallHepler;
     this->avCodecContext=avCodecContext;
+    //设置队列丢帧的策略(相当于接口)
+    frame_queue.setReleaseHandle(releaseAvFrame);
+    frame_queue.setSyncHandle(dropFrame);
 }
 
 void *decode(void *args) {
@@ -120,8 +149,38 @@ void VideoChannel::synchronzieFrame() {
         //将一帧的数据回调出去,给native-lib(有Window对象)
         renderFrame(dst_data[0], dst_linesize[0], avCodecContext->width, avCodecContext->height);
         LOGE("解码一帧视频 %d",frame_queue.size());
-        //暂时未做音视频同步 这里先延迟16ms 每帧隔16ms去渲染
-        av_usleep(16 * 1000);
+        clock = frame->pts * av_q2d(time_base);
+        //计算每一帧的延迟时间,同下,帧率并没有将解码时间计算进去
+        double frame_delays = 1.0/fps;
+        //音视频同步以音频的播放速度为基准
+        //使用ffmpeg里面封装的 (pts数量) * (time_base计算出来的单位) 计算出音频播放的相对时间
+        double audioClock = audioChannel->clock;
+        //计算解码时间extra_delay 手机配置低或比较卡的时候解码时间会明显导致音视频不同步
+        double extra_delay = frame->repeat_pict/(2*fps);
+        double delay = extra_delay + frame_delays;
+        //计算音视频播放时间的差值
+        double diff = clock - audioClock;
+        if (clock > audioClock){ //视频超前
+            if (diff>1){//如果相差时间比较久,就休眠久一点
+                av_usleep((10*2) * 1000000);
+            } else {
+                av_usleep((delay+diff) * 1000000);
+            }
+        } else {//视频滞后
+            if (diff>1){//如果相差时间比较久,不休眠
+
+            } else if (diff>0.05){//认为视频需要追赶音频,需要丢帧,如果采用减少延迟时间的方式容易造成视频频繁超前和滞后
+                //将frame队列中的非关键帧丢掉,不可以丢packet数据,因为packet中存放的是压缩数据,有关键帧的数据
+                releaseAvFrame(frame);
+                frame_queue.sync();
+            } else{
+
+            }
+        }
+
+
+//        double frame_delays = 1000.0/fps;
+//        av_usleep(frame_delays);
         releaseAvFrame(frame);
     }
     av_freep(&dst_data[0]);
@@ -132,4 +191,8 @@ void VideoChannel::synchronzieFrame() {
 
 void VideoChannel::setRenderCallback(RenderFrame renderFrame) {
     this->renderFrame = renderFrame;
+}
+
+void VideoChannel::setFps(int fps) {
+    this->fps=fps;
 }
