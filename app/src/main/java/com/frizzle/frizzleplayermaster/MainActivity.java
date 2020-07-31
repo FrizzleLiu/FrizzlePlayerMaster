@@ -25,6 +25,9 @@ public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBar
     private SurfaceView surfaceView;
     private SeekBar seekBar;
     private FrizzlePlayer frizzlePlayer;
+    private boolean isTouchSeekBar;
+    private boolean isSeeking;
+    private int progress;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -36,6 +39,7 @@ public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBar
         seekBar = findViewById(R.id.seekBar);
         seekBar.setOnSeekBarChangeListener(this);
         Button btnPlay = findViewById(R.id.btn_play);
+        Button btnStop = findViewById(R.id.btn_stop);
         btnPlay.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -51,6 +55,62 @@ public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBar
             @Override
             public void onPrepared() {
                 frizzlePlayer.start();
+                int duration = frizzlePlayer.getDuration();
+                if (duration<=0){
+                    return;
+                }
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        seekBar.setVisibility(View.VISIBLE);
+                    }
+                });
+            }
+        });
+        seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(SeekBar seekBar, int i, boolean b) {
+
+            }
+
+            @Override
+            public void onStartTrackingTouch(SeekBar seekBar) {
+                isTouchSeekBar=true;
+            }
+
+            @Override
+            public void onStopTrackingTouch(SeekBar seekBar) {
+                isTouchSeekBar=false;
+                isSeeking = true;
+                progress = frizzlePlayer.getDuration() * seekBar.getProgress()/100;
+                frizzlePlayer.seek(progress);
+            }
+        });
+
+        frizzlePlayer.setOnProgressListener(new FrizzlePlayer.OnProgressListener() {
+            @Override
+            public void onProgress(final int progress2) {
+                if (!isTouchSeekBar){
+                    runOnUiThread(new Runnable() {
+                        @Override
+                        public void run() {
+                            int duration = frizzlePlayer.getDuration();
+                            if (duration!=0){
+                                if (isSeeking){
+                                    isSeeking=false;
+                                    return;
+                                }
+                                seekBar.setProgress(progress2*100/duration);
+                            }
+                        }
+                    });
+                }
+            }
+        });
+        btnStop.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                stop();
             }
         });
     }
@@ -102,5 +162,21 @@ public class MainActivity extends AppCompatActivity implements SeekBar.OnSeekBar
     @Override
     public void onPointerCaptureChanged(boolean hasCapture) {
 
+    }
+
+
+    /**
+     * 停止播放
+     */
+    private void stop() {
+        frizzlePlayer.stop();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (frizzlePlayer!=null){
+            frizzlePlayer.release();
+        }
     }
 }

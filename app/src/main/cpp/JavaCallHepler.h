@@ -12,6 +12,7 @@ class JavaCallHepler {
 public:
     //回调Java层可能会有线程问题所以需要JavaVM
     JavaCallHepler(JavaVM *_javaVM,JNIEnv *_env,jobject &_jobj);
+    virtual ~JavaCallHepler();
 
     void onPrepare(int thread);
 
@@ -19,7 +20,6 @@ public:
 
     void onProgress(int thread,int progress);
 
-    ~JavaCallHepler();
 
 private:
     JavaVM *javaVm;

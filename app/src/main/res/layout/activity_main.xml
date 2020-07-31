@@ -29,4 +29,12 @@
         android:gravity="center"
         />
 
+    <Button
+        android:id="@+id/btn_stop"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="停止"
+        android:gravity="center"
+        />
+
 </LinearLayout>

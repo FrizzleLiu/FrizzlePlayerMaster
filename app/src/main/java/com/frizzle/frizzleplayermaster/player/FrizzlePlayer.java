@@ -98,6 +98,37 @@ public class FrizzlePlayer  implements SurfaceHolder.Callback {
         native_start();
     }
 
+    public void stop() {
+        native_stop();
+    }
+
+    /**
+     * 界面销毁调用
+     */
+    public void release() {
+        if (null != surfaceHolder){
+            surfaceHolder.removeCallback(this);
+        }
+        native_release();
+    }
+
+    public int getDuration(){
+        return native_getDuration();
+    }
+
+    public native int native_getDuration();
+
+    public void seek(final int progress) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                native_seek(progress);
+            }
+        }).start();
+    }
+
+    public native void native_seek(int progress);
+
     public interface OnPrepareListener {
         void onPrepared();
     }
@@ -110,4 +141,6 @@ public class FrizzlePlayer  implements SurfaceHolder.Callback {
         void onProgress(int progress);
     }
 
+    public native void native_stop();
+    public native void native_release();
 }

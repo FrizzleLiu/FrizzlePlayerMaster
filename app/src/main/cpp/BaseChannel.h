@@ -47,7 +47,25 @@ public:
         LOGE("释放channel:%d %d", packet_queue.size(), frame_queue.size());
     };
 
-    virtual void play()=0;
+    //拖动视频进度,清空队列中现存数据
+    void clear(){
+        packet_queue.clear();
+        frame_queue.clear();
+    }
+
+    //队列开始工作
+    void startWork(){
+        packet_queue.setWork(1);
+        frame_queue.setWork(1);
+    }
+
+    //队列停止工作
+    void stopWork(){
+        packet_queue.setWork(0);
+        frame_queue.setWork(0);
+    }
+
+   virtual void play()=0;
     virtual void stop()=0;
     SafeQueue<AVPacket *> packet_queue;
     SafeQueue<AVFrame *> frame_queue;

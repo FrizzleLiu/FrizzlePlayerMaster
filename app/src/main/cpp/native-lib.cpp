@@ -86,3 +86,49 @@ Java_com_frizzle_frizzleplayermaster_player_FrizzlePlayer_native_1set_1surface(J
     window = ANativeWindow_fromSurface(env,surface);
 
 }
+
+extern "C"
+JNIEXPORT jint JNICALL
+Java_com_frizzle_frizzleplayermaster_player_FrizzlePlayer_native_1getDuration(JNIEnv *env,
+                                                                              jobject thiz) {
+   //获取视频时长
+   if(frizzleFFmpeg){
+       return frizzleFFmpeg->getDuration();
+   }
+}
+
+//拖拽进度
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_frizzle_frizzleplayermaster_player_FrizzlePlayer_native_1seek(JNIEnv *env, jobject thiz,
+                                                                       jint progress) {
+    if (frizzleFFmpeg){
+        frizzleFFmpeg->seek(progress);
+    }
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_frizzle_frizzleplayermaster_player_FrizzlePlayer_native_1stop(JNIEnv *env, jobject thiz) {
+    //停止播放
+    if (frizzleFFmpeg){
+        frizzleFFmpeg->stop();
+    }
+
+    if (javaCallHepler){
+        delete javaCallHepler;
+        javaCallHepler = 0;
+    }
+
+}
+
+extern "C"
+JNIEXPORT void JNICALL
+Java_com_frizzle_frizzleplayermaster_player_FrizzlePlayer_native_1release(JNIEnv *env,
+                                                                          jobject thiz) {
+   //释放资源
+   if (window){
+       ANativeWindow_release(window);
+       window=0;
+   }
+}

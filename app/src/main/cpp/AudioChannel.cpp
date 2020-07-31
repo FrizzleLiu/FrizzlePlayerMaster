@@ -1,9 +1,10 @@
 //
 // Created by Administrator on 2019/6/4.
 //
-extern "C"{
+extern "C" {
 #include <libavutil/time.h>
 }
+
 #include "AudioChannel.h"
 
 void *audioPlay(void *args) {
@@ -18,8 +19,9 @@ void *audioDecode(void *args) {
     return 0;
 }
 
-AudioChannel::AudioChannel(int id, JavaCallHepler *javaCallHelper, AVCodecContext *avCodecContext,AVRational time_base)
-        : BaseChannel(id, javaCallHelper, avCodecContext,time_base) {
+AudioChannel::AudioChannel(int id, JavaCallHepler *javaCallHelper, AVCodecContext *avCodecContext,
+                           AVRational time_base)
+        : BaseChannel(id, javaCallHelper, avCodecContext, time_base) {
     //根据布局获取声道数
     out_channels = av_get_channel_layout_nb_channels(AV_CH_LAYOUT_STEREO);
     out_samplesize = av_get_bytes_per_sample(AV_SAMPLE_FMT_S16);
@@ -32,9 +34,9 @@ AudioChannel::AudioChannel(int id, JavaCallHepler *javaCallHelper, AVCodecContex
 void AudioChannel::play() {
     //初始化转换器的上下文
     swr_ctx = swr_alloc_set_opts(0, AV_CH_LAYOUT_STEREO, AV_SAMPLE_FMT_S16, out_sample_rate,
-                                   avCodecContext->channel_layout,
-                                   avCodecContext->sample_fmt,
-                                   avCodecContext->sample_rate, 0, 0);
+                                 avCodecContext->channel_layout,
+                                 avCodecContext->sample_fmt,
+                                 avCodecContext->sample_rate, 0, 0);
     swr_init(swr_ctx);
     packet_queue.setWork(1);
     frame_queue.setWork(1);
@@ -214,9 +216,17 @@ int AudioChannel::getPcm() {
         //转换后多少数据  计算buffer size  44110*2*2
         data_size = nb * out_channels * out_samplesize;
         //计算音频播放的时间 pts是一个数量 av_q2d(time_base)获取的是单位,获取相对时间
-        clock= frame->pts * av_q2d(time_base);
+        clock = frame->pts * av_q2d(time_base);
         break;
+    }
+    if (javaCallHelper) {
+        javaCallHelper->onProgress(THREAD_CHILD, clock);
     }
     releaseAvFrame(frame);
     return data_size;
+}
+
+AudioChannel::~AudioChannel() {
+    free(buffer);
+    buffer = 0;
 }

@@ -17,8 +17,9 @@ extern "C" {
 //控制层
 class FrizzleFFmpeg {
 public:
+    int duration;
     FrizzleFFmpeg(JavaCallHepler *javaCallHepler,const char *data_path);
-    ~FrizzleFFmpeg();
+    virtual ~FrizzleFFmpeg();
     void prepare();
     void prepareFFmpeg();
 
@@ -27,9 +28,16 @@ public:
 
     void setRenderCallback(RenderFrame renderFrame);
 
-private:
+    int getDuration();
+
+    void seek(jint progress);
+
+    void stop();
+
+public:
     pthread_t pid_prepare;//准备线程运行完销毁
     pthread_t pid_play;//播放线程,一直存在知道播放完毕
+    pthread_t pid_stop;//释放属于耗时操作
     AVFormatContext *avFormatContext;
     char *url;
     JavaCallHepler *javaCallHepler;
@@ -37,6 +45,8 @@ private:
     AudioChannel *audioChannel;
     bool isPlaying;
     RenderFrame renderFrame;
+    bool isSeek = 0;
+    pthread_mutex_t seekMutex;
 };
 
 

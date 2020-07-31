@@ -19,6 +19,7 @@ class AudioChannel :public BaseChannel {
 
 public:
     AudioChannel(int id, JavaCallHepler *javaCallHelper, AVCodecContext *avCodecContext,AVRational time_base);
+    virtual ~AudioChannel();
     virtual void play();
 
     virtual void stop();

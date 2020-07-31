@@ -56,3 +56,7 @@ void JavaCallHepler::onProgress(int thread, int progress) {
         env->CallVoidMethod(jobj, jmid_progress, progress);
     }
 }
+
+JavaCallHepler::~JavaCallHepler() {
+
+}

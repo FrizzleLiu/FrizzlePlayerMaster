@@ -18,10 +18,14 @@ FrizzleFFmpeg::FrizzleFFmpeg(JavaCallHepler *javaCallHepler, const char *data_pa
     this->javaCallHepler = javaCallHepler;
     //因为dataPath使用完毕内存会被释放,copy一下
     strcpy(url, data_path);
+    duration = 0;
+    pthread_mutex_init(&seekMutex,0);
 }
 
 FrizzleFFmpeg::~FrizzleFFmpeg() {
-
+    pthread_mutex_destroy(&seekMutex);
+    javaCallHepler=0;
+    DELETE(url);
 }
 
 void FrizzleFFmpeg::prepare() {
@@ -55,6 +59,8 @@ void FrizzleFFmpeg::prepareFFmpeg() {
         }
         return;
     }
+    //流的时长,单位是微秒
+    duration = avFormatContext->duration/1000000;
 
     for (int i = 0; i < avFormatContext->nb_streams; ++i) {
         AVCodecParameters *codecpar = avFormatContext->streams[i]->codecpar;
@@ -201,5 +207,67 @@ void FrizzleFFmpeg::play() {
 
 void FrizzleFFmpeg::setRenderCallback(RenderFrame renderFrame) {
     this->renderFrame=renderFrame;
+}
+
+int FrizzleFFmpeg::getDuration() {
+    return duration;
+}
+
+void FrizzleFFmpeg::seek(int progress) {
+    if (progress<0 || progress >= duration){
+        return;
+    }
+
+    if (!avFormatContext){
+        return;
+    }
+
+    pthread_mutex_lock(&seekMutex);
+    isSeek = 1;
+    //换算成微秒
+    int64_t seek = progress * 1000000;
+    //最后一个参数表示异步拖动
+    av_seek_frame(avFormatContext,-1,seek,AVSEEK_FLAG_BACKWARD);
+    //清空队列中现存的数据
+    if (audioChannel){
+        audioChannel->stopWork();
+        audioChannel->clear();
+        audioChannel->startWork();
+    }
+
+    if (videoChannel){
+        videoChannel->stopWork();
+        videoChannel->clear();
+        videoChannel->startWork();
+    }
+    pthread_mutex_unlock(&seekMutex);
+    isSeek=0;
+}
+
+void *async_stop(void *args){
+    FrizzleFFmpeg *frizzleFFmpeg = static_cast<FrizzleFFmpeg *>(args);
+    pthread_join(frizzleFFmpeg->pid_prepare,0);
+    frizzleFFmpeg->isPlaying=0;
+    pthread_join(frizzleFFmpeg->pid_play,0);
+    DELETE(frizzleFFmpeg->audioChannel);
+    DELETE(frizzleFFmpeg->videoChannel);
+    if (frizzleFFmpeg->avFormatContext){
+        avformat_close_input(&frizzleFFmpeg->avFormatContext);
+        avformat_free_context(frizzleFFmpeg->avFormatContext);
+        frizzleFFmpeg->avFormatContext=NULL;
+    }
+    DELETE(frizzleFFmpeg);
+    return 0;
+}
+
+void FrizzleFFmpeg::stop() {
+    javaCallHepler=0;
+    if (audioChannel){
+        audioChannel->javaCallHelper=0;
+    }
+    if (videoChannel){
+        videoChannel->javaCallHelper=0;
+    }
+    pthread_create(&pid_stop,0,async_stop,this);
 }
 
